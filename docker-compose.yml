@@ -103,7 +103,7 @@ services:
     image: mariadb:10.3
     restart: on-failure
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${INIT_PASSWORD}
     volumes:
       - ./mariadb.cnf:/etc/mysql/conf.d/frappe.cnf
       - mariadb-vol:/var/lib/mysql
@@ -115,11 +115,11 @@ services:
     depends_on:
       - main
     environment:
-      - SITE_NAME=${SITE_NAME}
+      - SITE_NAME=erp.localhost
       - DB_ROOT_USER=root
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - INSTALL_APPS=erpnext
+      - MYSQL_ROOT_PASSWORD=${INIT_PASSWORD}
+      - ADMIN_PASSWORD=${INIT_PASSWORD}
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites
 
