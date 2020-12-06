@@ -1,0 +1,13 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Frappe 🔧
+        run: git clone --depth 1 https://github.com/frappe/frappe
