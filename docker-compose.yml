@@ -28,6 +28,8 @@ services:
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites
       - assets-vol:/home/frappe/frappe-bench/sites/assets
+      - frappe:/home/frappe/frappe-bench/apps/frappe
+      - erpnext:/home/frappe/frappe-bench/apps/erpnext
 
   schedule:
     image: frappe/erpnext-worker:${ERPNEXT_VERSION}
@@ -130,3 +132,5 @@ volumes:
   redis-socketio-vol:
   assets-vol:
   sites-vol:
+  frappe:
+  erpnext:
