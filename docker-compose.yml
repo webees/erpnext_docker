@@ -1,105 +1,45 @@
 version: "3"
 
 services:
-  nginx:
-    image: frappe/erpnext-nginx:${ERPNEXT_VERSION}
-    restart: on-failure
-    environment:
-      - FRAPPE_PY=main
-      - FRAPPE_PY_PORT=8000
-      - FRAPPE_SOCKETIO=frappe-socketio
-      - SOCKETIO_PORT=9000
+  bench:
+    image: frappe/bench:latest
+    privileged: true
+    restart: "no"
+    working_dir: /home/frappe
     ports:
-      - "1080:80"
+      - 1080:8000
     volumes:
-      - sites-vol:/var/www/html/sites
-      - assets-vol:/assets
+      - bench_vol:/home/frappe
+    command: >
+        bash -c "set -e
+        && bench init --skip-redis-config-generation --frappe-path ${FRAPPE_REPO} --frappe-branch ${FRAPPE_BRANCH} bench
+        && cd bench
+        && bench set-mariadb-host mariadb
+        && bench set-redis-cache-host redis_cache:6379
+        && bench set-redis-queue-host redis_queue:6379
+        && bench set-redis-socketio-host redis_socketio:6379
+        && bench new-site erp.localhost --mariadb-root-password ${INIT_PASSWORD} --admin-password ${INIT_PASSWORD} --no-mariadb-socket || true
+        && bench get-app --branch ${ERPNEXT_BRANCH} erpnext ${ERPNEXT_REPO} || true
+        && bench --site erp.localhost install-app erpnext || true
+        && bench start --no-dev --no-prefix"
 
-  main:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: on-failure
-    environment:
-      - MARIADB_HOST=mariadb
-      - REDIS_CACHE=redis-cache:6379
-      - REDIS_QUEUE=redis-queue:6379
-      - REDIS_SOCKETIO=redis-socketio:6379
-      - SOCKETIO_PORT=9000
-      - AUTO_MIGRATE=1
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-      - assets-vol:/home/frappe/frappe-bench/sites/assets
-      - frappe:/home/frappe/frappe-bench/apps/frappe
-      - erpnext:/home/frappe/frappe-bench/apps/erpnext
-
-  schedule:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: on-failure
-    command: schedule
-    depends_on:
-      - redis-queue
-      - redis-cache
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-
-  worker:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: on-failure
-    command: worker
-    depends_on:
-      - redis-queue
-      - redis-cache
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-
-  worker-short:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: on-failure
-    command: worker
-    environment:
-      - WORKER_TYPE=short
-    depends_on:
-      - redis-queue
-      - redis-cache
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-
-  worker-long:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: on-failure
-    command: worker
-    environment:
-      - WORKER_TYPE=long
-    depends_on:
-      - redis-queue
-      - redis-cache
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-
-  frappe-socketio:
-    image: frappe/frappe-socketio:${FRAPPE_VERSION}
-    restart: on-failure
-    depends_on:
-      - redis-socketio
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
-
-  redis-socketio:
+  redis_socketio:
     image: redis:latest
     restart: on-failure
     volumes:
-      - redis-socketio-vol:/data
+      - redis_socketio_vol:/data
 
-  redis-cache:
+  redis_cache:
     image: redis:latest
     restart: on-failure
     volumes:
-      - redis-cache-vol:/data
+      - redis_cache_vol:/data
 
-  redis-queue:
+  redis_queue:
     image: redis:latest
     restart: on-failure
     volumes:
-      - redis-queue-vol:/data
+      - redis_queue_vol:/data
 
   mariadb:
     image: mariadb:10.3
@@ -108,29 +48,11 @@ services:
       - MYSQL_ROOT_PASSWORD=${INIT_PASSWORD}
     volumes:
       - ./mariadb.cnf:/etc/mysql/conf.d/frappe.cnf
-      - mariadb-vol:/var/lib/mysql
-
-  init:
-    image: frappe/erpnext-worker:${ERPNEXT_VERSION}
-    restart: "no"
-    command: new
-    depends_on:
-      - main
-    environment:
-      - SITE_NAME=erp.localhost
-      - DB_ROOT_USER=root
-      - INSTALL_APPS=erpnext
-      - MYSQL_ROOT_PASSWORD=${INIT_PASSWORD}
-      - ADMIN_PASSWORD=${INIT_PASSWORD}
-    volumes:
-      - sites-vol:/home/frappe/frappe-bench/sites
+      - mariadb_vol:/var/lib/mysql
 
 volumes:
-  mariadb-vol:
-  redis-cache-vol:
-  redis-queue-vol:
-  redis-socketio-vol:
-  assets-vol:
-  sites-vol:
-  frappe:
-  erpnext:
+  mariadb_vol:
+  redis_cache_vol:
+  redis_queue_vol:
+  redis_socketio_vol:
+  bench_vol:
